@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "SEO Inspector by sona.to",
+  "version": "0.1.0",
+  "description": "Check any page for SEO problems, AI crawler access, share previews and structured data. Nothing leaves your browser.",
+  "homepage_url": "https://sona.to",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "action": {
+    "default_title": "SEO Inspector",
+    "default_popup": "popup/popup.html",
+    "default_icon": "icons/mark-480.png"
+  },
+  "icons": {
+    "480": "icons/mark-480.png",
+    "512": "icons/tile-512.png"
+  }
+}

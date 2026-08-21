@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="popup.css">
+<title>SEO Inspector</title>
+</head>
+<body>
+<header class="hd">
+  <img class="hd-mark" src="../icons/mark-480.png" alt="">
+  <div class="hd-txt">
+    <div class="hd-host" id="host">&nbsp;</div>
+    <div class="hd-path" id="path">&nbsp;</div>
+  </div>
+  <button class="hd-btn" id="copy" title="Copy report as markdown" aria-label="Copy report as markdown">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  </button>
+</header>
+<main id="body">
+  <div class="empty" id="empty">Reading page…</div>
+</main>
+<footer class="ft">
+  <a class="ft-cta" id="cta" href="https://sona.to/features/seo-tools" target="_blank" rel="noopener">Audit the whole site</a>
+</footer>
+<script src="agents.js"></script>
+<script src="checks.js"></script>
+<script src="history.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
