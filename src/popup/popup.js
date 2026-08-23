@@ -137,6 +137,28 @@ function renderFindings(target) {
     if (f.sev === 'missing') {
       c.addEventListener('click', () => why.classList.toggle('hide'));
     }
+
+    if (f.targets && f.targets.length) {
+      c.classList.add('hasTarget');
+      let pos = 0;
+      c.addEventListener('mouseenter', () => { pos = 0; highlight(f.targets[0]); });
+      c.addEventListener('mouseleave', clearHighlight);
+
+      // Stepping lives on its own button, not on the card. Clicking the card
+      // toggles the explanation, and one click must not do two things.
+      if (f.targets.length > 1) {
+        const step = el('button', 'fnd-step', '1 of ' + f.targets.length);
+        step.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          pos = (pos + 1) % f.targets.length;
+          step.textContent = (pos + 1) + ' of ' + f.targets.length;
+          highlight(f.targets[pos]);
+        });
+        step.addEventListener('mouseenter', (ev) => { ev.stopPropagation(); highlight(f.targets[pos]); });
+        t.appendChild(step);
+      }
+    }
+
     s.appendChild(c);
   });
 
@@ -332,6 +354,28 @@ const PLATFORMS = [
 let SP_TAB = 'x';
 
 let HISTORY = null;   // snapshot list for this URL, previous visits only
+let TAB_ID = null;
+let HL_TIMER = null;
+
+// Two executeScript calls per highlight: one to set the target, one to draw.
+// Debounced, because mouseenter fires far more often than the page needs
+// redrawing and each call is an IPC round trip.
+function highlight(target) {
+  if (!TAB_ID) return;
+  clearTimeout(HL_TIMER);
+  HL_TIMER = setTimeout(async () => {
+    try {
+      await api.scripting.executeScript({
+        target: { tabId: TAB_ID },
+        func: (t) => { window.__sonaTarget = t; },
+        args: [target]
+      });
+      await api.scripting.executeScript({ target: { tabId: TAB_ID }, files: ['lib/highlight.js'] });
+    } catch (e) { /* restricted page or navigation, nothing to draw */ }
+  }, 90);
+}
+
+function clearHighlight() { highlight(null); }
 
 function socialValues() {
   const d = DATA;
@@ -777,6 +821,8 @@ async function main() {
     fail('This page cannot be inspected. Browser and extension pages are off limits.');
     return;
   }
+
+  TAB_ID = tab.id;
 
   try {
     const u = new URL(tab.url);

@@ -59,7 +59,8 @@
 
   // --- headings ---------------------------------------------------------
   const hNodes = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'));
-  const headings = hNodes.slice(0, CAP.headings).map((h) => ({
+  const headings = hNodes.slice(0, CAP.headings).map((h, idx) => ({
+    idx: idx,
     level: Number(h.tagName.slice(1)),
     text: txt(h.innerText || h.textContent),
   }));
@@ -81,7 +82,8 @@
   // separately so the Images figures stay honest and alt rules never fire here.
   const svgNodes = Array.from(document.querySelectorAll('svg'));
   let svgHidden = 0, svgNamed = 0, svgBare = 0;
-  svgNodes.forEach((sv) => {
+  const svgBareIdx = [];
+  svgNodes.forEach((sv, svIdx) => {
     if (sv.closest('svg') !== sv) return; // nested <svg>, count the outer only
     if (sv.getAttribute('aria-hidden') === 'true') { svgHidden++; return; }
     const own = txt(sv.getAttribute('aria-label'))
@@ -93,6 +95,7 @@
     const host = sv.closest('a[aria-label], a[title], button[aria-label], button[title], [role="img"][aria-label]');
     if (host) { svgNamed++; return; }
     svgBare++;
+    if (svgBareIdx.length < 50) svgBareIdx.push(svIdx);
   });
 
   // --- links ------------------------------------------------------------
@@ -115,7 +118,7 @@
     const anchor = txt(a.innerText || a.textContent);
     const named = !!anchor || accName(a);
     if (!named) empty++;
-    if (i < CAP.links) links.push({ href, anchor, rel, internal: isInternal, named });
+    if (i < CAP.links) links.push({ idx: i, href, anchor, rel, internal: isInternal, named });
   });
 
   // --- structured data --------------------------------------------------
@@ -179,7 +182,8 @@
     headings: { list: headings, counts: headingCounts, total: hNodes.length, truncated: hNodes.length > CAP.headings },
     images: {
       total: imgNodes.length, withAlt, emptyAlt, missingAlt, lazy,
-      list: imgNodes.slice(0, CAP.images).map((im) => ({
+      list: imgNodes.slice(0, CAP.images).map((im, idx) => ({
+        idx: idx,
         src: abs(im.getAttribute('src') || im.currentSrc || ''),
         alt: im.hasAttribute('alt') ? im.getAttribute('alt') : null,
         width: im.naturalWidth || null, height: im.naturalHeight || null,
@@ -192,7 +196,7 @@
       list: links,
     },
     structured: { jsonld, microdata },
-    svg: { total: svgNodes.length, hidden: svgHidden, named: svgNamed, bare: svgBare },
+    svg: { total: svgNodes.length, hidden: svgHidden, named: svgNamed, bare: svgBare, bareIdx: svgBareIdx },
     social,
     alternates,
     content: {

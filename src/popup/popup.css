@@ -246,3 +246,8 @@ main::-webkit-scrollbar-track { background: transparent; }
 .hl-row.self .hl-url { color: var(--m3); }
 .hl-row.self .hl-code { color: var(--vi); }
 .hl-row.xdef .hl-code, .hl-row.xdef .hl-url { color: var(--m1); }
+
+.fnd.hasTarget { cursor: pointer; }
+.fnd.hasTarget:hover { filter: brightness(1.35); }
+.fnd-step { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 10.5px; color: rgba(248,246,241,0.42); background: rgba(248,246,241,0.06); border: 0; border-radius: 4px; padding: 3px 7px; font-family: inherit; cursor: pointer; }
+.fnd-step:hover { color: var(--m3); }

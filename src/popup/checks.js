@@ -86,6 +86,7 @@ var CHECKS = [
       return n && (n + ' empty heading' + (n > 1 ? 's' : ''));
     },
     evidence: (d) => d.headings.list.map((h, i) => (!h.text ? ('H' + h.level + ' at position ' + (i + 1)) : null)).filter(Boolean),
+    targets: (d) => d.headings.list.filter((h) => !h.text).map((h) => ({ q: 'h1,h2,h3,h4,h5,h6', idx: h.idx })),
     why: 'A heading with no text carries no meaning.' },
 
   { id: 'og-title', sev: 'missing', group: 'Social', rollup: 'social',
@@ -146,15 +147,18 @@ var CHECKS = [
   { id: 'img-alt', sev: 'missing', group: 'Images',
     test: (d) => d.images.missingAlt && (d.images.missingAlt + ' image' + (d.images.missingAlt > 1 ? 's' : '') + ' without alt'),
     evidence: (d) => d.images.list.filter((i) => i.alt === null).map((i) => i.src),
+    targets: (d) => d.images.list.filter((i) => i.alt === null).map((i) => ({ q: 'img', idx: i.idx })),
     why: 'Alt text describes the image to crawlers and screen readers.' },
 
   { id: 'svg-bare', sev: 'missing', group: 'Images',
     test: (d) => d.svg && d.svg.bare && (d.svg.bare + ' inline SVG' + (d.svg.bare > 1 ? 's are' : ' is') + ' unlabelled'),
+    targets: (d) => (d.svg.bareIdx || []).map((i) => ({ q: 'svg', idx: i })),
     why: 'An svg needs aria-hidden="true" if decorative, or a title or aria-label if it carries meaning.' },
 
   { id: 'link-empty', sev: 'missing', group: 'Links',
     test: (d) => d.links.emptyAnchor && (d.links.emptyAnchor + ' link' + (d.links.emptyAnchor > 1 ? 's' : '') + ' with no anchor text'),
     evidence: (d) => d.links.list.filter((l) => !l.named).map((l) => l.href),
+    targets: (d) => d.links.list.filter((l) => !l.named).map((l) => ({ q: 'a[href]', idx: l.idx })),
     why: 'Anchor text tells crawlers what the destination is about.' },
 
   { id: 'hreflang-self', sev: 'missing', group: 'International', rollup: 'hreflang',
@@ -208,7 +212,11 @@ function runChecks(d, p) {
         ev = Object.keys(seen).map((k) => (seen[k] > 1 ? k + '  (x' + seen[k] + ')' : k));
       } catch (e) { console.error('[sona] evidence failed:', c.id, e); }
     }
-    if (title) raw.push({ id: c.id, sev: c.sev, group: c.group, rollup: c.rollup, title: title, why: c.why, evidence: ev && ev.length ? ev : null });
+    let tg = null;
+    if (title && c.targets) {
+      try { tg = c.targets(d, p || {}); } catch (e) { console.error('[sona] targets failed:', c.id, e); }
+    }
+    if (title) raw.push({ id: c.id, sev: c.sev, group: c.group, rollup: c.rollup, title: title, why: c.why, evidence: ev && ev.length ? ev : null, targets: tg && tg.length ? tg : null });
   });
 
   // Two or more findings sharing a rollup collapse into one card. A lone

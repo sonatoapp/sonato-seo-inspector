@@ -31,7 +31,7 @@
   const timed = async (url, opts) => {
     const ac = new AbortController();
     const id = setTimeout(() => ac.abort(), T);
-    try { return await fetch(url, Object.assign({ signal: ac.signal, credentials: 'omit' }, opts || {})); }
+    try { return await fetch(url, Object.assign({ signal: ac.signal, credentials: 'same-origin' }, opts || {})); }
     finally { clearTimeout(id); }
   };
 
