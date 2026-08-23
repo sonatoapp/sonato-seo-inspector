@@ -97,6 +97,69 @@ function inlineRow(key, value, cls) {
   return r;
 }
 
+/* ---------- score ---------- */
+
+function renderScore(target) {
+  // Four rules cannot run until the probe lands. Showing a number before then
+  // means showing one that corrects itself downward a moment later, which
+  // reads as a glitch and leaves people quoting the wrong figure.
+  if (!PROBE) {
+    const w = el('div', 'sc flat');
+    w.appendChild(el('div', 'sc-wait', 'Checking\u2026'));
+    w.appendChild(el('div', 'sc-sub', 'Reading robots.txt and the page HTML.'));
+    target.appendChild(w);
+    return;
+  }
+
+  const found = runChecks(DATA, PROBE);
+  const r = scorePage(found, !!PROBE);
+
+  const box = el('div', 'sc' + (r.fatal ? ' flat' : ''));
+  const top = el('div', 'sc-top');
+
+  if (r.fatal) {
+    top.appendChild(el('span', 'sc-lbl', r.label));
+    box.appendChild(top);
+    box.appendChild(el('div', 'sc-sub', r.why));
+    target.appendChild(box);
+    return;
+  }
+
+  const cls = r.score >= 90 ? 'good' : (r.score >= 60 ? 'mid' : 'bad');
+  top.appendChild(el('span', 'sc-n ' + cls, r.score));
+  top.appendChild(el('span', 'sc-of', 'of 100'));
+  box.appendChild(top);
+
+  const bits = [];
+  if (r.items.length) bits.push(r.items.length + ' issue' + (r.items.length > 1 ? 's' : '') + ' cost ' + r.lost);
+  else bits.push('Nothing deducted');
+  if (r.skipped) bits.push(r.skipped + ' checks still running');
+  box.appendChild(el('div', 'sc-sub', bits.join(' \u00b7 ') + (r.items.length ? '. Tap for the breakdown.' : '.')));
+
+  if (SC_OPEN && r.items.length) {
+    const br = el('div', 'sc-break');
+    r.items.forEach((it) => {
+      const row = el('div', 'sc-row');
+      row.appendChild(el('span', null, it.title));
+      row.appendChild(el('span', null, '-' + it.cost));
+      br.appendChild(row);
+    });
+    const t = el('div', 'sc-row total');
+    t.appendChild(el('span', null, 'Total deducted'));
+    t.appendChild(el('span', null, '-' + r.lost));
+    br.appendChild(t);
+    box.appendChild(br);
+  }
+
+  if (r.items.length) {
+    box.addEventListener('click', () => { SC_OPEN = !SC_OPEN; paint(); });
+  } else {
+    box.classList.add('flat');
+  }
+
+  target.appendChild(box);
+}
+
 /* ---------- findings ---------- */
 
 function renderFindings(target) {
@@ -352,6 +415,7 @@ const PLATFORMS = [
 ];
 
 let SP_TAB = 'x';
+let SC_OPEN = false;
 
 let HISTORY = null;   // snapshot list for this URL, previous visits only
 let TAB_ID = null;
@@ -762,6 +826,7 @@ function paint() {
   const m = $('body');
   const scroll = m.scrollTop;
   m.textContent = '';
+  renderScore(m);
   renderFindings(m);
   renderAgents(m);
   renderRaw(m);
@@ -800,6 +865,9 @@ function markdown() {
     L.push('- Blocked crawlers: ' + (blocked.length ? blocked.join(', ') : 'none'));
     L.push('- Sitemaps declared: ' + (PROBE.robots.sitemaps.length || 'none'));
   }
+  L.push('');
+  const _sc = scorePage(runChecks(DATA, PROBE), !!PROBE);
+  L.push(_sc.fatal ? ('Status: ' + _sc.label + '. ' + _sc.why) : ('Score: ' + _sc.score + '/100'));
   L.push('');
   L.push('Findings');
   const _f = runChecks(DATA, PROBE);

@@ -30,6 +30,15 @@ function snapshot(d, p, findings) {
     schema: d.structured.jsonld.length + d.structured.microdata.length,
     ogImage: d.social.og.image || '',
     findings: findings.length,
+    // The score is the point of the history: a number that moved is the
+    // signal, a field that changed is the detail. Null when fatal, since
+    // "not indexable" is a state rather than a value to compare.
+    score: (function () {
+      try {
+        var r = scorePage(findings, !!p);
+        return r.fatal ? null : r.score;
+      } catch (e) { return null; }
+    })(),
     // Only recorded once the probe lands, so a first paint cannot write a
     // snapshot that looks like the site lost its robots.txt.
     probed: !!p
@@ -38,12 +47,12 @@ function snapshot(d, p, findings) {
 
 var FIELD_LABELS = {
   title: 'Title', desc: 'Description', h1: 'H1', canonical: 'Canonical',
-  words: 'Word count', headings: 'Headings', links: 'Links',
+  score: 'Score', words: 'Word count', headings: 'Headings', links: 'Links',
   images: 'Images', schema: 'Structured data blocks', ogImage: 'og:image'
 };
 
 var TEXT_FIELDS = ['title', 'desc', 'h1', 'canonical', 'ogImage'];
-var NUM_FIELDS = ['words', 'headings', 'links', 'images', 'schema'];
+var NUM_FIELDS = ['score', 'words', 'headings', 'links', 'images', 'schema'];
 
 function diffSnapshots(prev, now) {
   const out = [];
@@ -53,6 +62,7 @@ function diffSnapshots(prev, now) {
     }
   });
   NUM_FIELDS.forEach((f) => {
+    if (f === 'score' && (prev.score == null || now.score == null)) return;
     const a = prev[f] || 0, b = now[f] || 0;
     if (a === b) return;
     // Ignore trivial word drift: a rotating testimonial is not a content change.

@@ -251,3 +251,22 @@ main::-webkit-scrollbar-track { background: transparent; }
 .fnd.hasTarget:hover { filter: brightness(1.35); }
 .fnd-step { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 10.5px; color: rgba(248,246,241,0.42); background: rgba(248,246,241,0.06); border: 0; border-radius: 4px; padding: 3px 7px; font-family: inherit; cursor: pointer; }
 .fnd-step:hover { color: var(--m3); }
+
+/* score */
+.sc { background: var(--l1); border-radius: 8px; padding: 14px; margin-bottom: 16px; cursor: pointer; }
+.sc.flat { cursor: default; }
+.sc-top { display: flex; align-items: baseline; gap: 10px; }
+.sc-n { font-size: 30px; font-weight: 500; line-height: 1; }
+.sc-n.good { color: var(--ok); }
+.sc-n.mid { color: var(--warn); }
+.sc-n.bad { color: var(--bad); }
+.sc-of { font-size: 12px; color: var(--m1); }
+.sc-lbl { font-size: 17px; font-weight: 500; color: var(--bad); line-height: 1.2; }
+.sc-sub { font-size: 11px; color: var(--m1); margin-top: 7px; line-height: 1.5; }
+.sc-break { margin-top: 11px; border-top: 1px solid var(--l2); padding-top: 9px; }
+.sc-row { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; padding: 3px 0; }
+.sc-row span:first-child { color: var(--m2); min-width: 0; }
+.sc-row span:last-child { color: var(--m1); flex-shrink: 0; }
+.sc-row.total { border-top: 1px solid var(--l2); margin-top: 6px; padding-top: 7px; color: var(--m3); }
+
+.sc-wait { font-size: 20px; color: var(--m1); line-height: 1.2; }
