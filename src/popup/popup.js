@@ -97,6 +97,61 @@ function inlineRow(key, value, cls) {
   return r;
 }
 
+/* ---------- compare ---------- */
+
+// Reuses diffSnapshots from the history feature. Compares markup-level fields
+// rather than page text: "how does this page differ from that one" is the
+// question worth answering, and a prose diff would be noise.
+function renderCompare(target) {
+  if (!PINNED || !PROBE) return;
+  if (PINNED.url === DATA.page.url) return;   // pinned page is the current one
+
+  const now = snapshot(DATA, PROBE, runChecks(DATA, PROBE));
+  const diffs = diffSnapshots(PINNED.snap, now, true);
+
+  const s = section('Compared with pinned page', diffs.length ? String(diffs.length) : null);
+
+  const head = el('div', 'cmp-head');
+  const u = el('span', 'cmp-url', PINNED.url.replace(/^https?:\/\//, ''));
+  u.title = PINNED.url;
+  head.appendChild(u);
+  const clear = el('button', 'cmp-clear', 'Unpin');
+  clear.addEventListener('click', async () => {
+    PINNED = null;
+    try { await api.storage.local.remove('pinned'); } catch (e) { /* nothing to remove */ }
+    $('pin').classList.remove('on');
+    paint();
+  });
+  head.appendChild(clear);
+  s.appendChild(head);
+
+  if (!diffs.length) {
+    s.appendChild(el('div', 'clean', 'Identical on every field checked.'));
+    target.appendChild(s);
+    return;
+  }
+
+  const box = el('div', 'chg');
+  diffs.forEach((d) => {
+    const r = el('div', 'cmp-row');
+    r.appendChild(el('div', 'cmp-k', d.label));
+
+    const a = el('div', 'cmp-side');
+    a.appendChild(el('span', 'cmp-tag', 'pinned'));
+    a.appendChild(el('span', 'cmp-val', d.from === '' || d.from == null ? '(none)' : d.from));
+    r.appendChild(a);
+
+    const b = el('div', 'cmp-side');
+    b.appendChild(el('span', 'cmp-tag', 'this'));
+    b.appendChild(el('span', 'cmp-val', d.to === '' || d.to == null ? '(none)' : d.to));
+    r.appendChild(b);
+
+    box.appendChild(r);
+  });
+  s.appendChild(box);
+  target.appendChild(s);
+}
+
 /* ---------- score ---------- */
 
 function renderScore(target) {
@@ -416,6 +471,7 @@ const PLATFORMS = [
 
 let SP_TAB = 'x';
 let SC_OPEN = false;
+let PINNED = null;   // one snapshot, kept under a fixed key
 
 let HISTORY = null;   // snapshot list for this URL, previous visits only
 let TAB_ID = null;
@@ -618,13 +674,30 @@ function renderHistory(target) {
   // previous open. Walk back to the most recent snapshot that actually differs,
   // which is the last time the page was something else.
   let prev = null, diffs = null;
+  const cutoff = Date.now() - HIST_MAX_AGE;
   for (let i = HISTORY.length - 1; i >= 0; i--) {
+    // Already dismissed, or old enough that it is no longer news.
+    if (HISTORY[i].seen) continue;
+    if (HISTORY[i].t < cutoff) continue;
     const d = diffSnapshots(HISTORY[i], now);
     if (d.length) { prev = HISTORY[i]; diffs = d; break; }
   }
   if (!prev) return;
 
-  const s = section('Changed since ' + agoLabel(prev.t), String(diffs.length));
+  const s = el('div', 'sec');
+  const head = el('div', 'chg-head');
+  head.appendChild(el('span', 'sec-h', 'Changed since ' + agoLabel(prev.t)));
+  head.firstChild.style.marginBottom = '0';
+  const dis = el('button', 'chg-dismiss', 'Dismiss');
+  dis.addEventListener('click', async () => {
+    // Marks the snapshot this was measured against, so the card stays until
+    // you say you have seen it rather than reappearing on every visit.
+    await historyDismiss(api, DATA.page.url, prev.t);
+    HISTORY = await historyLoad(api, DATA.page.url);
+    paint();
+  });
+  head.appendChild(dis);
+  s.appendChild(head);
   const box = el('div', 'chg');
 
   diffs.forEach((d) => {
@@ -634,7 +707,8 @@ function renderHistory(target) {
     if (d.kind === 'num') {
       v.appendChild(el('span', 'chg-from', d.from));
       v.appendChild(el('span', 'chg-arrow', '\u2192'));
-      v.appendChild(el('span', 'chg-to ' + (d.to > d.from ? 'chg-up' : 'chg-down'), d.to));
+      const dir = d.field === 'score' ? (d.to > d.from ? ' chg-up' : ' chg-down') : '';
+      v.appendChild(el('span', 'chg-to' + dir, d.to));
     } else if (!d.from) {
       v.appendChild(el('span', 'chg-to', d.to || '(empty)'));
       v.appendChild(el('span', 'chg-arrow', '  added'));
@@ -827,6 +901,7 @@ function paint() {
   const scroll = m.scrollTop;
   m.textContent = '';
   renderScore(m);
+  renderCompare(m);
   renderFindings(m);
   renderAgents(m);
   renderRaw(m);
@@ -911,6 +986,11 @@ async function main() {
   if (DATA.fatal) { fail('Read failed: ' + DATA.fatal); return; }
 
   HISTORY = await historyLoad(api, DATA.page.url);
+  try {
+    const got = await api.storage.local.get('pinned');
+    PINNED = (got && got.pinned) || null;
+    if (PINNED && PINNED.url !== DATA.page.url) $('pin').classList.add('on');
+  } catch (e) { PINNED = null; }
 
   paint();
 
@@ -925,6 +1005,17 @@ async function main() {
   // Written last so the snapshot reflects probe-derived findings too.
   await historySave(api, DATA.page.url, snapshot(DATA, PROBE, runChecks(DATA, PROBE)));
 }
+
+$('pin').addEventListener('click', async () => {
+  if (!DATA || !PROBE) return;
+  const rec = { url: DATA.page.url, snap: snapshot(DATA, PROBE, runChecks(DATA, PROBE)) };
+  try {
+    await api.storage.local.set({ pinned: rec });
+    PINNED = rec;
+    $('pin').classList.add('on');
+    paint();
+  } catch (e) { console.error('[sona] pin', e); }
+});
 
 $('copy').addEventListener('click', async () => {
   if (!DATA) return;

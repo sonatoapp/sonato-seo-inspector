@@ -29,6 +29,18 @@ function snapshot(d, p, findings) {
     images: d.images.total,
     schema: d.structured.jsonld.length + d.structured.microdata.length,
     ogImage: d.social.og.image || '',
+    // Compare-only. Kept out of the history diff on purpose: an edited H2
+    // would otherwise report a change on every visit to your own pages.
+    schemaTypes: (function () {
+      try {
+        var t = [];
+        d.structured.jsonld.forEach(function (b) { if (b.ok) schemaTypes(b.data, t); });
+        d.structured.microdata.forEach(function (m) { t.push(String(m).split('/').pop()); });
+        return t;
+      } catch (e) { return []; }
+    })(),
+    h2s: d.headings.list.filter(function (h) { return h.level === 2; })
+      .slice(0, 12).map(function (h) { return h.text; }),
     findings: findings.length,
     // The score is the point of the history: a number that moved is the
     // signal, a field that changed is the detail. Null when fatal, since
@@ -54,7 +66,11 @@ var FIELD_LABELS = {
 var TEXT_FIELDS = ['title', 'desc', 'h1', 'canonical', 'ogImage'];
 var NUM_FIELDS = ['score', 'words', 'headings', 'links', 'images', 'schema'];
 
-function diffSnapshots(prev, now) {
+// Only diffed when comparing two different pages, never in the history.
+var LIST_FIELDS = ['schemaTypes', 'h2s'];
+var LIST_LABELS = { schemaTypes: 'Schema types', h2s: 'H2 headings' };
+
+function diffSnapshots(prev, now, compare) {
   const out = [];
   TEXT_FIELDS.forEach((f) => {
     if ((prev[f] || '') !== (now[f] || '')) {
@@ -69,7 +85,33 @@ function diffSnapshots(prev, now) {
     if (f === 'words' && Math.abs(b - a) <= 3) return;
     out.push({ field: f, label: FIELD_LABELS[f], kind: 'num', from: a, to: b });
   });
+  if (compare) {
+    LIST_FIELDS.forEach((f) => {
+      const a = (prev[f] || []).join(' \u00b7 ');
+      const b = (now[f] || []).join(' \u00b7 ');
+      if (a === b) return;
+      out.push({ field: f, label: LIST_LABELS[f], kind: 'text', from: a, to: b });
+    });
+  }
   return out;
+}
+
+var HIST_MAX_AGE = 30 * 24 * 60 * 60 * 1000;   // backstop for anything never dismissed
+
+// Flags the snapshot a change was measured against, so the card is announced
+// until dismissed rather than on every visit forever. Matched on timestamp
+// because that is the only stable identifier a snapshot has.
+async function historyDismiss(api, url, ts) {
+  try {
+    const k = histKey(url);
+    const got = await api.storage.local.get(k);
+    const list = (got && got[k]) || [];
+    let hit = false;
+    list.forEach((sn) => { if (sn.t === ts) { sn.seen = true; hit = true; } });
+    if (!hit) return false;
+    await api.storage.local.set({ [k]: list });
+    return true;
+  } catch (e) { console.error('[sona] dismiss', e); return false; }
 }
 
 async function historyLoad(api, url) {
