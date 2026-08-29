@@ -136,13 +136,16 @@ function renderCompare(target) {
     const r = el('div', 'cmp-row');
     r.appendChild(el('div', 'cmp-k', d.label));
 
+    let host = 'pinned';
+    try { host = new URL(PINNED.url).hostname; } catch (e) { /* keep the fallback */ }
+
     const a = el('div', 'cmp-side');
-    a.appendChild(el('span', 'cmp-tag', 'pinned'));
+    a.appendChild(el('span', 'cmp-tag', host));
     a.appendChild(el('span', 'cmp-val', d.from === '' || d.from == null ? '(none)' : d.from));
     r.appendChild(a);
 
-    const b = el('div', 'cmp-side');
-    b.appendChild(el('span', 'cmp-tag', 'this'));
+    const b = el('div', 'cmp-side this');
+    b.appendChild(el('span', 'cmp-tag', 'This page'));
     b.appendChild(el('span', 'cmp-val', d.to === '' || d.to == null ? '(none)' : d.to));
     r.appendChild(b);
 
@@ -490,7 +493,7 @@ function highlight(target) {
         func: (t) => { window.__sonaTarget = t; },
         args: [target]
       });
-      await api.scripting.executeScript({ target: { tabId: TAB_ID }, files: ['lib/highlight.js'] });
+      await api.scripting.executeScript({ target: { tabId: TAB_ID }, files: ['/lib/highlight.js'] });
     } catch (e) { /* restricted page or navigation, nothing to draw */ }
   }, 90);
 }
@@ -636,9 +639,28 @@ function renderSchema(target) {
 
     const body = el('div', 'sd-body');
     body.style.display = 'none';
+    // The pre gets its own positioning context so the copy button lands on
+    // its corner rather than the padded card edge.
+    const wrap = el('div', 'sd-pre');
     const pre = el('pre');
-    pre.textContent = b.ok ? JSON.stringify(b.data, null, 2) : (b.error + '\n\n' + (b.preview || ''));
-    body.appendChild(pre);
+    const raw = b.ok ? JSON.stringify(b.data, null, 2) : (b.error + '\n\n' + (b.preview || ''));
+    pre.textContent = raw;
+    wrap.appendChild(pre);
+    body.appendChild(wrap);
+
+    // Ctrl+A inside a scrolling pre selects the whole panel, so a button is
+    // the only way to get just this block.
+    const cp = el('button', 'sd-copy', 'Copy');
+    cp.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(raw);
+        cp.textContent = 'Copied';
+        cp.classList.add('done');
+        setTimeout(() => { cp.textContent = 'Copy'; cp.classList.remove('done'); }, 1200);
+      } catch (e) { console.error('[sona] clipboard', e); }
+    });
+    wrap.appendChild(cp);
     row.appendChild(body);
 
     hd.addEventListener('click', () => {
@@ -975,7 +997,7 @@ async function main() {
 
   let res;
   try {
-    res = await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['lib/collect.js'] });
+    res = await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['/lib/collect.js'] });
   } catch (e) {
     fail('Could not read this page. ' + ((e && e.message) || e));
     return;
@@ -995,7 +1017,7 @@ async function main() {
   paint();
 
   try {
-    const pr = await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['lib/probe.js'] });
+    const pr = await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['/lib/probe.js'] });
     PROBE = (pr && pr[0] && pr[0].result) || null;
   } catch (e) {
     PROBE = { robots: { ok: false, error: (e && e.message) || String(e) }, raw: { ok: false, error: 'blocked' } };

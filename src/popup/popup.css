@@ -276,13 +276,28 @@ main::-webkit-scrollbar-track { background: transparent; }
 .cmp-url { font-size: 11px; color: var(--m1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cmp-clear { font-size: 10.5px; color: var(--m1); background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; flex-shrink: 0; }
 .cmp-clear:hover { color: var(--m3); }
-.cmp-row { padding: 10px 12px; border-bottom: 1px solid var(--l2); }
+.cmp-row { padding: 11px 12px; border-bottom: 1px solid var(--l2); }
 .cmp-row:last-child { border-bottom: 0; }
-.cmp-k { font-size: 10.5px; color: var(--m1); margin-bottom: 5px; }
-.cmp-side { display: flex; gap: 7px; font-size: 11.5px; line-height: 1.45; padding: 1px 0; }
-.cmp-tag { flex-shrink: 0; width: 42px; color: var(--m1); font-size: 10.5px; }
-.cmp-val { min-width: 0; overflow-wrap: anywhere; color: var(--m3); }
+/* Field label reads as a header, not another value. The muted scale is close
+   enough to white now that size and tracking have to carry the hierarchy. */
+.cmp-k { font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--m1); margin-bottom: 7px; }
+/* Stacked rather than side by side: long values wrap into blocks, and a fixed
+   tag column left the label floating beside three lines of text. */
+.cmp-side { padding-left: 9px; border-left: 2px solid var(--l3); margin-bottom: 7px; }
+.cmp-side:last-child { margin-bottom: 0; }
+/* The current page leads, the pinned one recedes: the question is how this
+   page differs, not what the other one says. */
+.cmp-side.this { border-left-color: var(--vi); }
+.cmp-tag { display: block; font-size: 9.5px; letter-spacing: 0.05em; color: var(--m1); margin-bottom: 2px; }
+.cmp-side.this .cmp-tag { color: var(--vi); }
+.cmp-val { font-size: 11.5px; line-height: 1.45; overflow-wrap: anywhere; color: rgba(248,246,241,0.66); }
+.cmp-side.this .cmp-val { color: var(--ink); }
 
 .chg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
 .chg-dismiss { font-size: 10.5px; color: var(--m1); background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; flex-shrink: 0; }
 .chg-dismiss:hover { color: var(--m3); }
+
+.sd-pre { position: relative; }
+.sd-copy { position: absolute; top: 6px; right: 6px; background: rgba(13,14,28,0.85); border: 1px solid var(--l3); border-radius: 4px; color: var(--m1); font-family: inherit; font-size: 10px; padding: 3px 7px; cursor: pointer; }
+.sd-copy:hover { color: var(--ink); border-color: var(--line); }
+.sd-copy.done { color: var(--ok); border-color: rgba(126,224,184,0.35); }
