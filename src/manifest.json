@@ -15,6 +15,7 @@
     "default_icon": "icons/mark-480.png"
   },
   "icons": {
+    "128": "icons/icon-128.png",
     "480": "icons/mark-480.png",
     "512": "icons/tile-512.png"
   }
