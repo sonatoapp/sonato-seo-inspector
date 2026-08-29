@@ -7,7 +7,7 @@ No account. No tracking. Nothing leaves the browser.
 
 ## What it checks
 
-**Findings** run 34 rules over the page and report only what is wrong or
+**Findings** run 33 rules over the page and report only what is wrong or
 missing, split into two levels: broken (the page cannot rank or the markup
 is malformed) and missing (an opportunity). Related gaps collapse into one
 card, and rules that can name the offending element show it.
