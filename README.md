@@ -69,3 +69,8 @@ source is the source.
 Adding a check is one entry in `CHECKS`. Adding a crawler means adding the
 token to both `probe.js` and `agents.js`; the popup asserts the two sets
 match and logs loudly if they drift.
+
+## License
+
+MIT. The sona.to name and logo are not covered by the license.
+Forks should use their own branding.
